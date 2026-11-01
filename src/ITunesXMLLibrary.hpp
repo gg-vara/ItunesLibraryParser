@@ -34,20 +34,18 @@
 #include <vector>
 
 #include "SIMD/Search.hpp"
-
-#ifdef __APPLE__
-#define fopen_s(pFile,filename,mode) ((*(pFile))=fopen((filename),(mode)))==NULL
-#endif
+#include "UTF8Path.hpp"
 
 struct ITunesLibraryFileName : public std::filesystem::path {
  public:
+    // UTF-8 encoded path
     ITunesLibraryFileName(const char * filePath) :
-        std::filesystem::path(filePath) {
+        std::filesystem::path(utf8Path(filePath)) {
         //
         if (!std::filesystem::exists(*this) || std::filesystem::is_directory(*this)) {
             std::string m ("Cannot open expected XML Library File" );
             m += " [";
-            m += std::filesystem::absolute(*this).string();
+            m += utf8String(std::filesystem::absolute(*this));
             m += "]";
             throw std::logic_error(m);
         }
@@ -77,7 +75,7 @@ struct ITunesXMLLibrary {
         memset(_ptr + _fileSize, 0, paddingSize);
 
         // reading from multiple handles at once is faster, even from file cache
-        const auto path = filePath.string();
+        const std::filesystem::path &path = filePath;
         const std::size_t partsC = std::clamp<std::size_t>(_fileSize / _minPartSize, 1, _maxParts);
         std::vector<char> succeeded(partsC, 0);
         std::vector<std::thread> workers;
@@ -97,7 +95,7 @@ struct ITunesXMLLibrary {
         //
         if (std::find(succeeded.begin(), succeeded.end(), 0) != succeeded.end()) {
             free(_ptr);
-            throw std::runtime_error("Cannot read XML Library File [" + path + "]");
+            throw std::runtime_error("Cannot read XML Library File [" + utf8String(path) + "]");
         }
     }
 
@@ -158,10 +156,9 @@ struct ITunesXMLLibrary {
     char* _ptr;
 
     // reads [from, to) of the file at the same position within the buffer
-    bool _readRange(const std::string& path, const std::size_t from, const std::size_t to) {
-        FILE * f = nullptr;
-        auto err = fopen_s(&f, path.c_str(), "rb");
-        if (err != 0 || f == nullptr) return false;
+    bool _readRange(const std::filesystem::path& path, const std::size_t from, const std::size_t to) {
+        FILE * f = openFile(path, "rb");
+        if (f == nullptr) return false;
 
         //
 #ifdef _WIN32

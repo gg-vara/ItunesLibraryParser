@@ -19,8 +19,9 @@
 
 #pragma once
 
+#include <stdio.h>
+
 #include <algorithm>
-#include <fstream>
 #include <functional>
 #include <stdexcept>
 #include <string>
@@ -31,6 +32,7 @@
 #include "ITunesXMLLibrary.hpp"
 #include "JSONWriter.hpp"
 #include "TracksScanner.hpp"
+#include "UTF8Path.hpp"
 
 // JSON conversion of a library tracks, held in memory until written.
 // Tracks are split in chunks, each one being scanned and converted on its own thread.
@@ -68,10 +70,12 @@ struct JSONLibrary {
     // tracks missing some fields
     std::size_t warningsCount() const { return _count(&Chunk::warnings); }
 
+    // "filePath" is UTF-8 encoded
     void writeTracks(const char * filePath) const {
         _write<compactLayout>(filePath, &Chunk::tracks);
     }
 
+    // "filePath" is UTF-8 encoded
     void writeWarnings(const char * filePath) const {
         _write<prettyLayout>(filePath, &Chunk::warnings);
     }
@@ -169,12 +173,18 @@ struct JSONLibrary {
 
     template<const JSONLayout& Layout>
     void _write(const char * filePath, Part Chunk::* part) const {
-        std::ofstream file { filePath, std::ios::out | std::ios::trunc | std::ios::binary };
-        if (!file) throw std::runtime_error(std::string { "Cannot write JSON file [" } + filePath + "]");
+        const auto error = std::string { "Cannot write JSON file [" } + filePath + "]";
 
-        _forEachPiece<Layout>(part, [&file](const std::string_view& piece) {
-            file.write(piece.data(), static_cast<std::streamsize>(piece.size()));
+        FILE * file = openFile(utf8Path(filePath), "wb");
+        if (file == nullptr) throw std::runtime_error(error);
+
+        bool written = true;
+        _forEachPiece<Layout>(part, [file, &written](const std::string_view& piece) {
+            written &= fwrite(piece.data(), 1, piece.size(), file) == piece.size();
         });
+
+        written &= fclose(file) == 0;
+        if (!written) throw std::runtime_error(error);
     }
 
     template<const JSONLayout& Layout>

@@ -21,6 +21,9 @@
 
 #include <catch2/catch.hpp>
 
+#include <filesystem>
+#include <string>
+
 #include "ITunesLibraryParser.hpp"
 
 bool parsing_succeeded(const char * fileName) {
@@ -47,6 +50,23 @@ TEST_CASE("Parse small file", "[parser]") {
     BENCHMARK("Parsing") {
         return parsing_succeeded(targetFile);
     };
+}
+
+TEST_CASE("Parse with UTF-8 paths", "[parser]") {
+    // non-ASCII characters, some of them outside of any Windows ANSI code page
+    const auto dir = std::filesystem::path { std::u8string { u8"Bibliothèque ★ 音楽" } };
+    std::filesystem::create_directories(dir);
+    std::filesystem::copy_file("iTunes Music Library (S).xml", dir / "library.xml",
+        std::filesystem::copy_options::overwrite_existing);
+
+    //
+    const auto utf8Dir = std::string { reinterpret_cast<const char *>(u8"Bibliothèque ★ 音楽/") };
+    const auto xml = utf8Dir + "library.xml";
+    const auto output = utf8Dir + "output.json";
+    const auto warnings = utf8Dir + "warnings.json";
+
+    REQUIRE_NOTHROW(ITunesLibraryParser { xml.c_str(), output.c_str(), warnings.c_str() }.produceOutputs());
+    REQUIRE(std::filesystem::file_size(dir / "output.json") > 0);
 }
 
 TEST_CASE("Parse big file", "[parser]") {

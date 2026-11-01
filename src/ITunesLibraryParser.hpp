@@ -24,9 +24,11 @@
 
 #include "ITunesXMLLibrary.hpp"
 #include "JSONLibrary.hpp"
+#include "UTF8Path.hpp"
 
 class ITunesLibraryParser {
  public:
+    // paths are UTF-8 encoded
     ITunesLibraryParser(const char * xmlFilePath,
                         const char * outputJSONFilePath,
                         const char * warningJSONFilePath) noexcept :
@@ -47,7 +49,7 @@ class ITunesLibraryParser {
         } else {
             // prevent stale warnings from a previous run
             std::error_code ec;
-            std::filesystem::remove(_warningJSONFilePath, ec);
+            std::filesystem::remove(utf8Path(_warningJSONFilePath), ec);
         }
     }
 
