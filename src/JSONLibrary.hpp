@@ -76,6 +76,16 @@ struct JSONLibrary {
         _write<prettyLayout>(filePath, &Chunk::warnings);
     }
 
+    // whole JSON content, as written by writeTracks()
+    std::string tracksJSON() const {
+        return _join<compactLayout>(&Chunk::tracks);
+    }
+
+    // whole JSON content, as written by writeWarnings()
+    std::string warningsJSON() const {
+        return _join<prettyLayout>(&Chunk::warnings);
+    }
+
  private:
     // tracks JSON objects, joined
     struct Part {
@@ -139,24 +149,43 @@ struct JSONLibrary {
         return total;
     }
 
-    template<const JSONLayout& Layout>
-    void _write(const char * filePath, Part Chunk::* part) const {
-        std::ofstream file { filePath, std::ios::out | std::ios::trunc | std::ios::binary };
-        if (!file) throw std::runtime_error(std::string { "Cannot write JSON file [" } + filePath + "]");
-
-        //
-        file << Layout.head;
+    // calls "append(std::string_view)" for each consecutive piece of the JSON file
+    template<const JSONLayout& Layout, typename Append>
+    void _forEachPiece(Part Chunk::* part, Append&& append) const {
+        append(Layout.head);
 
         bool isFirst = true;
         for (const auto &chunk : _chunks) {
             const auto &chunkPart = chunk.*part;
             if (chunkPart.count == 0) continue;
 
-            if (!isFirst) file << Layout.tracksSep;
-            file << chunkPart.json.view();
+            if (!isFirst) append(Layout.tracksSep);
+            append(chunkPart.json.view());
             isFirst = false;
         }
 
-        file << Layout.tail;
+        append(Layout.tail);
+    }
+
+    template<const JSONLayout& Layout>
+    void _write(const char * filePath, Part Chunk::* part) const {
+        std::ofstream file { filePath, std::ios::out | std::ios::trunc | std::ios::binary };
+        if (!file) throw std::runtime_error(std::string { "Cannot write JSON file [" } + filePath + "]");
+
+        _forEachPiece<Layout>(part, [&file](const std::string_view& piece) {
+            file.write(piece.data(), static_cast<std::streamsize>(piece.size()));
+        });
+    }
+
+    template<const JSONLayout& Layout>
+    std::string _join(Part Chunk::* part) const {
+        std::size_t size = 0;
+        _forEachPiece<Layout>(part, [&size](const std::string_view& piece) { size += piece.size(); });
+
+        std::string result;
+        result.reserve(size);
+        _forEachPiece<Layout>(part, [&result](const std::string_view& piece) { result += piece; });
+
+        return result;
     }
 };
