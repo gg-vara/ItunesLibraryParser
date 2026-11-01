@@ -19,20 +19,14 @@
 
 #pragma once
 
-#include <utility>
+#include <filesystem>
+#include <system_error>
 
-#include "Parser.hpp"
+#include "ITunesXMLLibrary.hpp"
+#include "JSONLibrary.hpp"
 
 class ITunesLibraryParser {
  public:
-    struct StoragedResults {
-        StoragedResults(const char * xmlFilePath) : source(xmlFilePath), packs(RawTracksCollection{source}) {}
-        
-        //
-        const ITunesXMLLibrary source;
-        PackedTracks packs;
-    };
-
     ITunesLibraryParser(const char * xmlFilePath,
                         const char * outputJSONFilePath,
                         const char * warningJSONFilePath) noexcept :
@@ -41,22 +35,20 @@ class ITunesLibraryParser {
     _warningJSONFilePath(warningJSONFilePath) {}
 
     void produceOutputs() const {
+        const ITunesXMLLibrary library { _xmlFilePath };
+        const JSONLibrary json { library };
+
         //
-        auto [libFile, packs] = getStoragedResults();
+        json.writeTracks(_outputJSONFilePath);
 
         // if has missing fields tracks
-        if(packs.missingFieldsTracks.size()) {
-            MissingFieldsJSONParser { std::move(packs.missingFieldsTracks) }
-                .copyToFile(_warningJSONFilePath);
+        if (json.warningsCount()) {
+            json.writeWarnings(_warningJSONFilePath);
+        } else {
+            // prevent stale warnings from a previous run
+            std::error_code ec;
+            std::filesystem::remove(_warningJSONFilePath, ec);
         }
-
-        //
-        SuccessfulJSONParser { std::move(packs.OKTracks) }
-            .copyToFile(_outputJSONFilePath);
-    }
-
-    StoragedResults getStoragedResults() const {
-        return StoragedResults(_xmlFilePath);
     }
 
  private:

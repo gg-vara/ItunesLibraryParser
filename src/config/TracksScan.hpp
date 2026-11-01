@@ -21,30 +21,50 @@
 
 #pragma once
 
-#include "Tracks.hpp"
+#include <array>
+#include <cstddef>
+#include <string_view>
 
 namespace FieldType {
 
-constexpr const FieldTypeStruct<0, "Track ID",       "<key>Track ID</key><integer>",       "</integer>">   TrackID;
-constexpr const FieldTypeStruct<1, "Disc Number",    "<key>Disc Number</key><integer>",    "</integer>">   DiscNumber;
-constexpr const FieldTypeStruct<2, "Track Number",   "<key>Track Number</key><integer>",   "</integer>">   TrackNumber;
-constexpr const FieldTypeStruct<3, "Year",           "<key>Year</key><integer>",           "</integer>">   Year;
-constexpr const FieldTypeStruct<4, "Date Added",     "<key>Date Added</key><date>",        "</date>">      DateAdded;
-constexpr const FieldTypeStruct<5, "Name",           "<key>Name</key><string>",            "</string>">    Name;
-constexpr const FieldTypeStruct<6, "Album Artist",   "<key>Album Artist</key><string>",    "</string>">    AlbumArtist;
-constexpr const FieldTypeStruct<7, "Album",          "<key>Album</key><string>",           "</string>">    Album;
-constexpr const FieldTypeStruct<8, "Genre",          "<key>Genre</key><string>",           "</string>">    Genre;
+// output order of the fields; keys may appear in any order within the XML file
+enum Index : std::size_t {
+    TrackID,
+    DiscNumber,
+    TrackNumber,
+    Year,
+    DateAdded,
+    Name,
+    AlbumArtist,
+    Album,
+    Genre,
+    Count
+};
 
-constexpr OrderedScansT orderedScans {
-    &TrackID,
-    &DiscNumber,
-    &TrackNumber,
-    &Year,
-    &DateAdded,
-    &Name,
-    &AlbumArtist,
-    &Album,
-    &Genre,
+// XML <key> names, which are also used as JSON keys
+constexpr const std::array<std::string_view, Index::Count> fieldNames {
+    "Track ID",
+    "Disc Number",
+    "Track Number",
+    "Year",
+    "Date Added",
+    "Name",
+    "Album Artist",
+    "Album",
+    "Genre",
+};
+
+// value used when the field is missing; empty means the track is reported as incomplete
+constexpr const std::array<std::string_view, Index::Count> defaultValues {
+    "",
+    "1",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
 };
 
 }  // namespace FieldType

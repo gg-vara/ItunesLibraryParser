@@ -44,6 +44,19 @@ target_compile_definitions(${PROJECT_NAME}_tests
     PRIVATE CATCH_CONFIG_ENABLE_BENCHMARKING
 )
 
+# per-stage benchmark
+add_executable(${PROJECT_NAME}_bench
+    bench.cpp
+)
+
+set_target_properties(${PROJECT_NAME}_bench PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+target_link_libraries(${PROJECT_NAME}_bench PRIVATE
+    itunes-library-parser
+)
+
 #tests handling
 include(CTest)
 list(APPEND CMAKE_MODULE_PATH ${CATCH_SOURCE_DIR}/contrib)

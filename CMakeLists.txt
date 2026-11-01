@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.19.3 FATAL_ERROR)
 
 # project definition
 project(ITunesLibraryParser
-    VERSION 0.1.3
+    VERSION 0.2.0
     LANGUAGES CXX
 )
 
@@ -38,19 +38,16 @@ endif()
 add_library(itunes-library-parser INTERFACE)
 target_include_directories(itunes-library-parser INTERFACE src)
 
-if(AVX2_FOUND) 
-    # for AVX2 compatibility ensured    
-    target_sources(itunes-library-parser INTERFACE src/SIMD/AVX2Find.cpp)
+# tracks are scanned on multiple threads
+find_package(Threads REQUIRED)
+target_link_libraries(itunes-library-parser INTERFACE Threads::Threads)
 
-    #
-    target_compile_options(itunes-library-parser 
+# header-only, SIMD instructions must be enabled on consumers
+if(AVX2_FOUND)
+    target_compile_options(itunes-library-parser
         INTERFACE ${AVX2_FLAGS}
-    ) 
+    )
 elseif(NEON_FOUND)
-    #
-    target_sources(itunes-library-parser INTERFACE src/SIMD/NeonFind.cpp)
-
-    #
     target_link_options(itunes-library-parser INTERFACE -mfpu=neon -mfloat-abi=hard)
 endif()
 
