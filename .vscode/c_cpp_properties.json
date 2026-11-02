@@ -4,7 +4,7 @@
             "name": "Win32",
             "browse": {
                 "path": [
-                    "${env:MINGW64_ROOT}/include"
+                    "${env:MSYS2_ROOT}/clang64/include"
                 ],
                 "limitSymbolsToIncludedHeaders": true
             },
@@ -19,10 +19,10 @@
                 "CATCH_CONFIG_ENABLE_BENCHMARKING"
             ],
             "windowsSdkVersion": "10.0.18362.0",
-            "compilerPath": "${env:MINGW64_ROOT}/bin/gcc.exe",
+            "compilerPath": "${env:MSYS2_ROOT}/clang64/bin/clang++.exe",
             "cStandard": "c11",
             "cppStandard": "c++20",
-            "intelliSenseMode": "gcc-x64"
+            "intelliSenseMode": "clang-x64"
         },
         {
             "name": "MacOS",
